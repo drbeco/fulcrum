@@ -8,6 +8,8 @@
 ### Usage
 
 * It must run continuously, starting after boot
+* Keep your API key secret.
+* Add your API key to any text file which name starts with api. 
 
 ### Example
 
