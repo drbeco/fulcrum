@@ -1,25 +1,22 @@
-## Nome do Repositório
+## Fulcrum
 
-### Introdução 
+### Introduction
 
-* Colocar aqui uma breve explicação do programa
-* Explicar o processamento
+* This program intends to purvay random bits to /dev/random
+* It grabs its randomness from Random.Org
 
-### Uso
+### Usage
 
-* Colocar aqui a sintáxe de uso do programa
-* Entradas esperadas
-* Saída produzida
+* It must run continuously, starting after boot
 
-### Exemplos
+### Example
 
-* Colocar aqui alguns exemplos
-* Casos de uso
+* TODO
 
-### Orientação
+### Contact
 
-* Autor: Prof. Dr. Ruben Carlo Benante
-* Email: rcb@upe.br
-* Data: 2016-09-07
-* Licensa: GNU/GPL v2.0
+* Author: Prof. Dr. Ruben Carlo Benante
+* E-mail: rcb@beco.cc
+* Date: 2016-09-07
+* License: GNU/GPL v2.0
 

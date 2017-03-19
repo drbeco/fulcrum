@@ -1,6 +1,6 @@
 #***************************************************************************
-#*   Autoversion makefile                       v.20160715.193844 (Hydra)  *
-#*   Copyright (C) 2015-2016 by Ruben Carlo Benante <rcb@beco.cc>          *
+#*   Autoversion makefile                        v.20170318.003409 (lcurl) *
+#*   Copyright (C) 2014-2017 by Ruben Carlo Benante <rcb@beco.cc>          *
 #*                                                                         *
 #*   This makefile sets BUILD and allows to set MAJOR.MINOR version,       *
 #*   DEBUG and OBJ to compile a range of different targets                 *
@@ -25,7 +25,7 @@
 #*   Webpage: http://drbeco.github.io/                                     *
 #***************************************************************************
 #
-#Usage:
+# Usage:
 #
 #	* Options:
 #		- DEBUG=[0|1] turn on/off debug MACRO
@@ -55,9 +55,9 @@
 #
 # * Directly from vim editor command line:
 #    - Normal C program (ex1.c)
-#        :make
+#        :make ex1.x
 #    - Aspipo program (ex1.c)
-#        :make OBJ=libaspipo-ux64.o
+#        :make ex1.x OBJ=libaspipo-ux64.o
 #
 # * Copy from 'rascunhos' to 'trabalhos'
 # 	- $ make copy PRG=ex1
@@ -80,13 +80,36 @@
 # 	 - Generate a 'tags' index file with all tags in all C source codes
 # 	 	$ make tags
 # 	 - Use with vi:
+# 	 	:make tags
 # 	 	- To find a function or other tag, use $ vim -t tag
 # 	 	- Inside vi, use :ta tag
 #
-# * Clean temporary files *.o and errors.err
-# * Clean all built files: *.x *.so *.o errors.err and tags
-# 	 - $ make wipe
 #
+# * clean
+#   Clean temporary files *.o and errors.err
+#   	$ make clean
+#
+# * wipe 
+#	- WARNING!! Clean all created files: *.x *.so *.o errors.err and tags
+# 		$ make wipe
+#
+# Log:
+# 2017-03-03:
+# 		* added -fdiagnostics-color=always to colorize tee output
+# 		* added -pg -fprofile-arcs to allow gprof command on debug
+# 2017-03-05:
+# 		* added variable CCCOLOR to work with vi
+# 			- set makeprg=make\ o=%< CCCOLOR=never\ $* 
+# 			- set makeprg=make\ %<.x CCCOLOR=never\ $*
+# 			- set makeprg=make\ CCCOLOR=never\ $*
+#		* added CPPFLAGS += -D$(D) so we can pass values to
+#			C-Pre-processor via make prog.x D=VARIABLE=VALUE
+# 2017-03-06:
+# 		* ifeq "$(DEBUG)" "1" to set CFLAGS
+# 		* added _XOPEN_SOURCE=700 to pair with -ansi
+# 		* added _FORTIFY_SOURCE=1 to help catch overflows
+# 2017-03-18:
+# 		* added -lcurl to link with libcurl
 
 .PHONY: clean wipe nomatch
 .PRECIOUS: %.o
@@ -97,6 +120,8 @@ MAJOR ?= 0
 MINOR ?= 1
 OBJ ?=
 SRC ?=
+CCCOLOR ?= always
+D ?= D_
 BUILD = $(shell date +"%g%m%d.%H%M%S")
 DEFSYM = $(subst .,_,$(BUILD))
 VERSION = "\"$(MAJOR).$(MINOR).$(BUILD)\""
@@ -105,11 +130,22 @@ BF = bf
 PT = gpt
 PLLD = swipl-ld
 PL = swipl
-CFLAGS = -Wall -Wextra -g -O0 -std=gnu99
-#-pedantic-errors -ansi
-#-Werror -Ofast -c
-CPPFLAGS = -DVERSION=$(VERSION) -DBUILD="\"$(BUILD)\"" -DDEBUG=$(DEBUG)
-LDLIBS = -Wl,--defsym,BUILD_$(DEFSYM)=0 -lm -lpthread -lncurses
+CFLAGS = -Wall -Wextra -std=gnu99 -fdiagnostics-color=$(CCCOLOR)
+#CFLAGS = -Wall -Wextra -g -Og -std=gnu99 -pg -fprofile-arcs -fdiagnostics-color=$(CCCOLOR)
+ifeq "$(DEBUG)" "0"
+CFLAGS += -Ofast
+else ifeq "$(DEBUG)" "1"
+CFLAGS += -g -Og
+else
+CFLAGS += -g -Og -pg -fprofile-arcs -ansi -Wpedantic
+endif
+#-pedantic-errors -Werror
+#-Ofast -c
+CPPFLAGS = -DVERSION=$(VERSION) -DBUILD="\"$(BUILD)\"" -DDEBUG=$(DEBUG) -D$(D) -D_FORTIFY_SOURCE=1
+ifeq "$(DEBUG)" "2"
+CPPFLAGS += -D_XOPEN_SOURCE=700 
+endif
+LDLIBS = -Wl,--defsym,BUILD_$(DEFSYM)=0 -lm -lpthread -lncurses -lcurl
 CCSHARED = -shared -fPIC
 BFFLAGS = -i on -p both -r on -w on
 PLLDSHARED = -shared
@@ -118,11 +154,17 @@ PLFLAGS = --goal=main --stand_alone=true
 # Programa em C (incluindo bibliotecas como allegro ou libaspipo).
 # Inclui VERSION, data de BUILD e DEBUG (opcional).
 %.x : %.c $(OBJ) $(SRC)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o $@ 2>&1 | tee errors.err
+	-$(CC) $(CFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o $@ 2>&1 | tee errors.err
+ifeq "$(CCCOLOR)" "always"
+	@sed -i -r "s/\x1B\[(([0-9]+)(;[0-9]+)*)?[m,K,H,f,J]//g" errors.err
+endif
 
 # Shared library
 %.so : %.c $(OBJ) $(SRC)
-	$(CC) $(CCSHARED) $(CFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o $@ 2>&1 | tee errors.err
+	-$(CC) $(CCSHARED) $(CFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o $@ 2>&1 | tee errors.err
+ifeq "$(CCCOLOR)" "always"
+	@sed -i -r "s/\x1B\[(([0-9]+)(;[0-9]+)*)?[m,K,H,f,J]//g" errors.err
+endif
 
 # Programa BrainForce.
 %.bf.x : %.bf
@@ -148,7 +190,7 @@ PLFLAGS = --goal=main --stand_alone=true
 %.o : %.c
 
 nomatch :
-	echo 'makefile error' $(warning nomatch)
+	@echo 'makefile error: no rules for the given goal(s)' $(warning nomatch)
 
 # CUIDADO! Apaga tudo que o makefile pode criar.
 wipe :
