@@ -265,6 +265,8 @@ PIDFILE=/var/run/$DAEMON_NAME.pid
 main $*
 exit 0
 
+#http://blog.scphillips.com/posts/2013/07/getting-a-python-script-to-run-in-the-background-as-a-service-on-boot/
+
 #/* -------------------------------------------------------------------------- */
 #/* vi: set ai et ts=4 sw=4 tw=0 wm=0 fo=croql : SHELL config for Vim modeline */
 #/* Template by Dr. Beco <rcb at beco dot cc> Version 20160714.124739          */
