@@ -2,8 +2,8 @@
 ### BEGIN INIT INFO
 # Title: fulcrum.sh
 # Provides: fulcrum
-# Required-Start: $syslog
-# Required-Stop: $syslog
+# Required-Start: $all
+# Required-Stop: $all
 # Should-Start:
 # Should-Stop:
 # Default-Start: 2 3 4 5
