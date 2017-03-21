@@ -155,7 +155,7 @@ while True:
     #switch(flagProto):
     shouldLoop = {5:True, 6:True, 7:True}.get(flagProto, False)
     if shouldLoop:
-        logger.error("Sleeping for a while")
+        logger.error('Sleeping for a while (%d seconds)' % SleepLong)
         time.sleep(SleepLong)
         continue
         #sys.exit(1)
