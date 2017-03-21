@@ -25,13 +25,15 @@ from rdoclient import RandomOrgClient
 
 ## Defines
 FeedBits = 80000 # package of bits to ask from Random.Org
-CachedPackages = 3 # Number of cached packages to keep in memory before connecting to Random.Org
-MinimumEntropy = 1200 # Minimum system's entropy before starting feeding bits
+CachedPackages = 5 # Number of cached packages to keep in memory before connecting to Random.Org
+MinimumEntropy = 600 # Minimum system's entropy before starting feeding bits
 MinimumRequests = 10 # Minimum requests available from Random.Org
 SleepLong = 3600 # sleep one hour
 SleepError = 5 # Time to sleep in case of error
 SleepInfo = 2 # Time to sleep in case of info or warning
 DEVNULL = open(os.devnull, 'wb') # /dev/null
+APIDIR = './'
+#APIDIR = '/usr/local/bin/fulcrum/'
 
 logging.basicConfig(format='%(asctime)s:%(levelname)s:%(name)s:%(message)s', filename='fulcrum.log', level=logging.INFO, datefmt='%Y%m%d.%H%M%S')
 logger = logging.getLogger('fulcrum')
@@ -40,20 +42,17 @@ for handler in logging.root.handlers:
  
 printonce = 0 # 'Entropy is OK' message only once
 
+
 try:
-    fd = open("api-randomorg.txt", "r")
+    fd = open("%s.api-randomorg.txt" % APIDIR, "r")
     keyn = fd.readline()
     fd.close()
     key = keyn.rstrip()
-except IOError:
-    logger.error('Cannot open api-randomorg.txt for reading')
-    sys.exit(1)
 except:
-    logger.error('Unexpected error while reading api-randomorg.txt')
+    logger.error('Unexpected error while reading api key')
     sys.exit(1)
 
 r = RandomOrgClient(key, blocking_timeout=3600.0, http_timeout=30.0)
-#r = RandomOrgClient(key)
 
 flagProto = 0
 
@@ -66,20 +65,15 @@ hbl = int(hblt.text.rstrip())
 if abl < FeedBits+1:
     logger.error("Not enough API bits at Random.Org. (%d bits)" % abl)
     flagProto = 1
-    #sys.exit(1)
 
 if arl < MinimumRequests:
     logger.error("API requests depleted. (%d requests)" % arl)
     flagProto += 2
-    #sys.exit(1)
 
 if hbl < FeedBits+1:
     logger.error("Not enough HTTPS bits at Random.Org (%d bits)" % hbl)
     flagProto += 4
-    #sys.exit(1)
 
-#shouldExit = {0:0, 1:0, 2:0, 3:0, 4:0, 5:1, 6:1, 7:1}.get(flagProto, 1)
-#switch(flagProto):
 shouldExit = {5:True, 6:True, 7:True}.get(flagProto, False)
 if shouldExit:
     logger.error("Exiting: no API nor HTTP bits at start")
@@ -91,19 +85,6 @@ if shouldExit:
 #   2       HTTP
 #   3       HTTP
 #   4       API
-
-#if flagProto == 4:
-#    flagProto = 0 # flag==0 -> API, flag!=0 -> HTTP
-
-# 10 Kbytes = 80000 bits
-#curl 'https://www.random.org/integers/?num=10000&min=0&max=255&col=1&base=10&format=plain&rnd=new' -o 20170320quota10k.txt
-# cat 20170320quota10k.txt | ./txt2bin.x > 20170320quota10k.bin
-# create_blob_cache(self, n (unity), size (bits), format='base64', cache_size=10 (unity))
-#rcache = r.create_blob_cache(1, 80000, cache_size=3)
-
-#if flagProto == 0 || flagProto == 4: # API available
-#    rcache = r.create_blob_cache(1, FeedBits, cache_size=CachedPackages)
-#    time.sleep(3)
 
 while True:
     time.sleep(1)
@@ -135,19 +116,19 @@ while True:
     hblt = requests.get('https://www.random.org/quota/?format=plain')
     hbl = int(hblt.text.rstrip())
 
-    #if abl < FeedBits+1:
-    if abl < 3400000:
-        logger.error("Not enough API bits at Random.Org. (%d bits)" % abl)
+    #if abl < 3400000:
+    if abl < FeedBits+1:
+        logger.error("Not enough API bits at Random.Org (%d bits)" % abl)
         flagProto = 1
         time.sleep(SleepError)
 
     if arl < MinimumRequests:
-        logger.error("API requests depleted. (%d requests)" % arl)
+        logger.error("API requests depleted for Random.Org (%d requests)" % arl)
         flagProto += 2
         time.sleep(SleepError)
 
-    #if hbl < FeedBits+1:
-    if hbl < 360000:
+    #if hbl < 360000:
+    if hbl < FeedBits+1:
         logger.error("Not enough HTTPS bits at Random.Org (%d bits)" % hbl)
         flagProto += 4
         time.sleep(SleepError)
@@ -158,7 +139,6 @@ while True:
         logger.error('Sleeping for a while (%d seconds)' % SleepLong)
         time.sleep(SleepLong)
         continue
-        #sys.exit(1)
 
     if flagProto & 1 == 0:
         logger.info("API Bits left: %d (or %d bytes)" % (abl, abl/8))
@@ -201,16 +181,16 @@ while True:
         bindata = binascii.unhexlify(sl)
 
     try:
-        fbin = open("output.bin", "wb")
+        fbin = open("/tmp/output.bin", "wb")
         fbin.write(bindata)
         fbin.close
     except:
-        logger.error("Cannot write to output.bin file")
+        logger.error("Cannot write to /tmp/output.bin file")
         sys.exit(1)
         #time.sleep(SleepError)
         #continue
 
-    rngdcommand = "sudo rngd -f -t1 -r output.bin"
+    rngdcommand = "sudo rngd -f -t1 -r /tmp/output.bin"
     try:
         subprocess.check_call(rngdcommand.split(), stdout=DEVNULL, stderr=DEVNULL)
     except:
