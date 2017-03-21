@@ -181,16 +181,16 @@ while True:
         bindata = binascii.unhexlify(sl)
 
     try:
-        fbin = open("/tmp/output.bin", "wb")
+        fbin = open("/tmp/fulcrum_output.bin", "wb")
         fbin.write(bindata)
         fbin.close
     except:
-        logger.error("Cannot write to /tmp/output.bin file")
+        logger.error("Cannot write to /tmp/fulcrum_output.bin file")
         sys.exit(1)
         #time.sleep(SleepError)
         #continue
 
-    rngdcommand = "sudo rngd -f -t1 -r /tmp/output.bin"
+    rngdcommand = "sudo rngd -f -t1 -r /tmp/fulcrum_output.bin"
     try:
         subprocess.check_call(rngdcommand.split(), stdout=DEVNULL, stderr=DEVNULL)
     except:
