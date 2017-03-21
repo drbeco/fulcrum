@@ -116,7 +116,7 @@ while True:
     hblt = requests.get('https://www.random.org/quota/?format=plain')
     hbl = int(hblt.text.rstrip())
 
-    #if abl < 3400000:
+    #if abl < 3400000: # debug
     if abl < FeedBits+1:
         logger.error("Not enough API bits at Random.Org (%d bits)" % abl)
         flagProto = 1
@@ -127,7 +127,7 @@ while True:
         flagProto += 2
         time.sleep(SleepError)
 
-    #if hbl < 360000:
+    #if hbl < 360000: # debug
     if hbl < FeedBits+1:
         logger.error("Not enough HTTPS bits at Random.Org (%d bits)" % hbl)
         flagProto += 4
@@ -190,7 +190,8 @@ while True:
         #time.sleep(SleepError)
         #continue
 
-    rngdcommand = "sudo rngd -f -t1 -r /tmp/fulcrum_output.bin"
+    #rngdcommand = "sudo rngd -f -t1 -r /tmp/fulcrum_output.bin" # debug
+    rngdcommand = "rngd -f -t1 -r /tmp/fulcrum_output.bin"
     try:
         subprocess.check_call(rngdcommand.split(), stdout=DEVNULL, stderr=DEVNULL)
     except:
