@@ -25,8 +25,8 @@ from rdoclient import RandomOrgClient
 
 ## Defines
 FeedBits = 80000 # package of bits to ask from Random.Org
-CachedPackages = 5 # Number of cached packages to keep in memory before connecting to Random.Org
-MinimumEntropy = 600 # Minimum system's entropy before starting feeding bits
+CachedPackages = 10 # Number of cached packages to keep in memory before connecting to Random.Org
+MinimumEntropy = 700 # Minimum system's entropy before starting feeding bits
 MinimumRequests = 10 # Minimum requests available from Random.Org
 SleepLong = 3600 # sleep one hour
 SleepError = 5 # Time to sleep in case of error
@@ -34,30 +34,39 @@ SleepInfo = 2 # Time to sleep in case of info or warning
 DEVNULL = open(os.devnull, 'wb') # /dev/null
 APIDIR = './'
 #APIDIR = '/usr/local/bin/fulcrum/'
+LOGDIR = '/tmp/'
+#LOGDIR = '/var/log/'
+LOGFORMAT = '%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+BINDIR = '/tmp/'
+#BINDIR = '/var/cache/fulcrum'
 
-logging.basicConfig(format='%(asctime)s:%(levelname)s:%(name)s:%(message)s', filename='/tmp/fulcrum.log', level=logging.INFO, datefmt='%Y%m%d.%H%M%S')
+logging.basicConfig(format=LOGFORMAT, filename=LOGDIR + 'fulcrum.log', level=logging.INFO, datefmt='%Y%m%d.%H%M%S')
 logger = logging.getLogger('fulcrum')
 for handler in logging.root.handlers:
     handler.addFilter(logging.Filter('fulcrum'))
  
 printonce = 0 # 'Entropy is OK' message only once
 
-
 try:
     fd = open("%s.api-randomorg.txt" % APIDIR, "r")
     keyn = fd.readline()
     fd.close()
     key = keyn.rstrip()
-except:
-    logger.error('Unexpected error while reading api key')
+except Exception as ex:
+    logger.error('Unexpected error while reading api key: %s' % ex.message)
     sys.exit(1)
 
 r = RandomOrgClient(key, blocking_timeout=3600.0, http_timeout=30.0)
 
 flagProto = 0
 
-abl = r.get_bits_left()
-arl = r.get_requests_left()
+#check if wrong key
+try:
+    abl = r.get_bits_left()
+    arl = r.get_requests_left()
+except Exception as ex:
+    logger.error('Unexpected error while using api key: %s' % ex.message)
+    sys.exit(1)
 
 hblt = requests.get('https://www.random.org/quota/?format=plain')
 hbl = int(hblt.text.rstrip())
@@ -146,6 +155,7 @@ while True:
         logger.info("API Requests left: %d " % arl)
     if flagProto & 4 == 0:
         logger.info("HTTP Bits left: %d (or %d bytes)" % (hbl, hbl/8))
+    logger.info("Total Bits left: %d (or %d bytes)" % (abl+hbl, (abl+hbl)/8))
     time.sleep(SleepInfo)
 
     #if flagProto == 9: #debug
@@ -181,13 +191,14 @@ while True:
         bindata = binascii.unhexlify(sl)
 
     try:
-        fbin = open("/tmp/fulcrum_output.bin", "wb")
+        fbin = open("%sfulcrum_output.bin" % BINDIR, "wb")
         fbin.write(bindata)
         fbin.close
     except:
-        logger.error("Cannot write to /tmp/fulcrum_output.bin file")
+        logger.error("Cannot write to %sfulcrum_output.bin file" % BINDIR)
         sys.exit(1)
-        #time.sleep(SleepError)
+        #logger.error('Sleeping for a while (%d seconds)' % SleepLong)
+        #time.sleep(SleepLong)
         #continue
 
     #rngdcommand = "sudo rngd -f -t1 -r /tmp/fulcrum_output.bin" # debug
@@ -199,21 +210,8 @@ while True:
         sys.exit(1)
 #Loop while True back
 
-############ draft
-#sl = sh.text.rstrip().split('\n') # list of hexas
-#bindata = binascii.unhexlify(''.join(sl))
-#process = subprocess.Popen(rngdcommand.split(), stdout=subprocess.PIPE)
-#output, error = process.communicate()
-#  val = array.array('i', [0])
-#  fcntl.ioctl (fd.fileno(), RNDGETENTCNT, val.buffer_info()[0])
-#import ctypes
-#import os
-#import ioctl
-#import ioctl.linux
-#RNDGETENTCNT = ioctl.linux.IOR('R', 0x00, ctypes.c_int)
-#rndgetentcnt = ioctl.ioctl_fn_ptr_r(RNDGETENTCNT, ctypes.c_int)
-#fd = os.open('/dev/random', os.O_RDONLY)
-#entropy_avail = rndgetentcnt(fd)
-#print('entropy_avail:', entropy_avail)
-#fd.os.close()
+#* ------------------------------------------------------------------- *
+#* Python config for Vim modeline                                      *
+#* vi: set ai et ts=4 sw=4 sts=4 tw=72 wm=0 fo=croqlt :                *
+#* Template by Dr. Beco <rcb at beco dot cc> Version 20170322.131248   *
 
