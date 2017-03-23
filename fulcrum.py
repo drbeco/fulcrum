@@ -26,7 +26,7 @@ from rdoclient import RandomOrgClient
 ## Defines
 FeedBits = 80000 # package of bits to ask from Random.Org
 CachedPackages = 10 # Number of cached packages to keep in memory before connecting to Random.Org
-MinimumEntropy = 700 # Minimum system's entropy before starting feeding bits
+MinimumEntropy = 650 # Minimum system's entropy before starting feeding bits
 MinimumRequests = 10 # Minimum requests available from Random.Org
 SleepLong = 3600 # sleep one hour
 SleepError = 5 # Time to sleep in case of error
@@ -46,6 +46,8 @@ for handler in logging.root.handlers:
     handler.addFilter(logging.Filter('fulcrum'))
  
 printonce = 0 # 'Entropy is OK' message only once
+flagKey = True
+flagProto = 0
 
 try:
     fd = open("%s.api-randomorg.txt" % APIDIR, "r")
@@ -54,11 +56,12 @@ try:
     key = keyn.rstrip()
 except Exception as ex:
     logger.error('Unexpected error while reading api key: %s' % ex.message)
-    sys.exit(1)
+    flagKey = False
 
-r = RandomOrgClient(key, blocking_timeout=3600.0, http_timeout=30.0)
-
-flagProto = 0
+try:
+    r = RandomOrgClient(key, blocking_timeout=3600.0, http_timeout=30.0)
+except:
+    flagKey = False
 
 #check if wrong key
 try:
@@ -66,10 +69,14 @@ try:
     arl = r.get_requests_left()
 except Exception as ex:
     logger.error('Unexpected error while using api key: %s' % ex.message)
-    sys.exit(1)
+    flagKey = False
+    abl = 0
+    arl = 0
+    #sys.exit(1)
 
 hblt = requests.get('https://www.random.org/quota/?format=plain')
 hbl = int(hblt.text.rstrip())
+
 
 if abl < FeedBits+1:
     logger.error("Not enough API bits at Random.Org. (%d bits)" % abl)
@@ -85,7 +92,7 @@ if hbl < FeedBits+1:
 
 shouldExit = {5:True, 6:True, 7:True}.get(flagProto, False)
 if shouldExit:
-    logger.error("Exiting: no API nor HTTP bits at start")
+    logger.error("No API nor HTTP bits at start. Long sleeping (%d seconds)")
     sys.exit(1)
 
 # flagExit  Action
@@ -212,6 +219,6 @@ while True:
 
 #* ------------------------------------------------------------------- *
 #* Python config for Vim modeline                                      *
-#* vi: set ai et ts=4 sw=4 sts=4 tw=72 wm=0 fo=croqlt :                *
+#* vi: set ai et ts=4 sw=4 sts=4 tw=72 wm=0 fo=croql :                *
 #* Template by Dr. Beco <rcb at beco dot cc> Version 20170322.131248   *
 
