@@ -26,7 +26,7 @@ from rdoclient import RandomOrgClient
 ## Defines
 FeedBits = 80000 # package of bits to ask from Random.Org
 CachedPackages = 10 # Number of cached packages to keep in memory before connecting to Random.Org
-MinimumEntropy = 650 # Minimum system's entropy before starting feeding bits
+MinimumEntropy = 650 # Minimum system's entropy before starting feeding bits (default 650)
 MinimumRequests = 10 # Minimum requests available from Random.Org
 SleepLong = 3600 # sleep one hour
 SleepError = 5 # Time to sleep in case of error
@@ -56,12 +56,12 @@ try:
     key = keyn.rstrip()
 except Exception as ex:
     logger.error('Unexpected error while reading api key: %s' % ex.message)
-    flagKey = False
+    flagKey = False # Do not attempt to use API, just HTTP
 
 try:
     r = RandomOrgClient(key, blocking_timeout=3600.0, http_timeout=30.0)
 except:
-    flagKey = False
+    flagKey = False # Do not attempt to use API, just HTTP
 
 #check if wrong key
 try:
@@ -69,14 +69,13 @@ try:
     arl = r.get_requests_left()
 except Exception as ex:
     logger.error('Unexpected error while using api key: %s' % ex.message)
-    flagKey = False
+    flagKey = False # Do not attempt to use API, just HTTP
     abl = 0
     arl = 0
     #sys.exit(1)
 
 hblt = requests.get('https://www.random.org/quota/?format=plain')
 hbl = int(hblt.text.rstrip())
-
 
 if abl < FeedBits+1:
     logger.error("Not enough API bits at Random.Org. (%d bits)" % abl)
@@ -90,17 +89,19 @@ if hbl < FeedBits+1:
     logger.error("Not enough HTTPS bits at Random.Org (%d bits)" % hbl)
     flagProto += 4
 
+# flagExit  Action
+#   0        API (available both API and HTTP)
+#   1        HTTP
+#   2        HTTP
+#   3        HTTP
+#   4        API
+#   5, 6, 7  Nothing available
+
 shouldExit = {5:True, 6:True, 7:True}.get(flagProto, False)
 if shouldExit:
-    logger.error("No API nor HTTP bits at start. Long sleeping (%d seconds)")
-    sys.exit(1)
-
-# flagExit  Action
-#   0       API
-#   1       HTTP
-#   2       HTTP
-#   3       HTTP
-#   4       API
+    logger.error("No API nor HTTP bits at start. Long sleeping (%d seconds)" % SleepLong)
+    time.sleep(SleepLong)
+    #sys.exit(1)
 
 while True:
     time.sleep(1)
@@ -126,8 +127,12 @@ while True:
 
     flagProto = 0
 
-    abl = r.get_bits_left()
-    arl = r.get_requests_left()
+    if flagKey:
+        abl = r.get_bits_left()
+        arl = r.get_requests_left()
+    else:
+        abl = 0
+        arl = 0
 
     hblt = requests.get('https://www.random.org/quota/?format=plain')
     hbl = int(hblt.text.rstrip())
@@ -136,23 +141,23 @@ while True:
     if abl < FeedBits+1:
         logger.error("Not enough API bits at Random.Org (%d bits)" % abl)
         flagProto = 1
-        time.sleep(SleepError)
+        #time.sleep(SleepError)
 
     if arl < MinimumRequests:
         logger.error("API requests depleted for Random.Org (%d requests)" % arl)
         flagProto += 2
-        time.sleep(SleepError)
+        #time.sleep(SleepError)
 
     #if hbl < 360000: # debug
     if hbl < FeedBits+1:
         logger.error("Not enough HTTPS bits at Random.Org (%d bits)" % hbl)
         flagProto += 4
-        time.sleep(SleepError)
+        #time.sleep(SleepError)
 
     #switch(flagProto):
     shouldLoop = {5:True, 6:True, 7:True}.get(flagProto, False)
     if shouldLoop:
-        logger.error('Sleeping for a while (%d seconds)' % SleepLong)
+        logger.error("Not enough bits to help. Good luck! I'm going to sleep for a while (%d seconds)" % SleepLong)
         time.sleep(SleepLong)
         continue
 
@@ -163,7 +168,7 @@ while True:
     if flagProto & 4 == 0:
         logger.info("HTTP Bits left: %d (or %d bytes)" % (hbl, hbl/8))
     logger.info("Total Bits left: %d (or %d bytes)" % (abl+hbl, (abl+hbl)/8))
-    time.sleep(SleepInfo)
+    #time.sleep(SleepInfo)
 
     #if flagProto == 9: #debug
     if flagProto == 0 or flagProto == 4: # API available
