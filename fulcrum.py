@@ -133,25 +133,28 @@ while True:
     else:
         abl = 0
         arl = 0
+        logger.error("No API keys")
 
     hblt = requests.get('https://www.random.org/quota/?format=plain')
     hbl = int(hblt.text.rstrip())
 
     #if abl < 3400000: # debug
     if abl < FeedBits+1:
-        logger.error("Not enough API bits at Random.Org (%d bits)" % abl)
         flagProto = 1
+        if flagKey:
+            logger.error("Not enough API bits at Random.Org (%d bits)" % abl)
         #time.sleep(SleepError)
 
     if arl < MinimumRequests:
-        logger.error("API requests depleted for Random.Org (%d requests)" % arl)
         flagProto += 2
+        if flagKey:
+            logger.error("API requests depleted for Random.Org (%d requests)" % arl)
         #time.sleep(SleepError)
 
     #if hbl < 360000: # debug
     if hbl < FeedBits+1:
-        logger.error("Not enough HTTPS bits at Random.Org (%d bits)" % hbl)
         flagProto += 4
+        logger.error("Not enough HTTPS bits at Random.Org (%d bits)" % hbl)
         #time.sleep(SleepError)
 
     #switch(flagProto):
@@ -161,9 +164,9 @@ while True:
         time.sleep(SleepLong)
         continue
 
-    if flagProto & 1 == 0:
+    if flagProto & 1 == 0 and flagKey:
         logger.info("API Bits left: %d (or %d bytes)" % (abl, abl/8))
-    if flagProto & 2 == 0:
+    if flagProto & 2 == 0 and flagKey:
         logger.info("API Requests left: %d " % arl)
     if flagProto & 4 == 0:
         logger.info("HTTP Bits left: %d (or %d bytes)" % (hbl, hbl/8))
